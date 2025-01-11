@@ -1,130 +1,4 @@
-<!-- # ColorPaletteGenerator.vue -->
-<template>
-  <div class="p-6 max-w-4xl mx-auto">
-    <!-- Base Color Input Card -->
-    <div class="bg-white rounded-lg shadow-sm mb-6">
-      <div class="p-6">
-        <div class="space-y-4">
-          <div class="flex gap-4 items-end">
-            <div class="flex-1">
-              <label class="block text-sm font-medium mb-2">Base Color (HEX)</label>
-              <input v-model="hexInput" placeholder="#FF5733" class="w-full px-3 py-2 border rounded-lg"
-                @input="handleHexInput" />
-            </div>
-            <div class="w-16 h-10 rounded-lg shadow-sm"
-              :style="{ backgroundColor: `hsl(${baseColor.h}deg ${baseColor.s}% ${baseColor.l}%)` }" />
-          </div>
-
-          <h2 class="text-xl font-bold mb-4">HSL Controls</h2>
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium mb-2">Hue ({{ baseColor.h }}°)</label>
-              <input type="range" v-model.number="baseColor.h" min="0" max="360" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Saturation ({{ baseColor.s }}%)</label>
-              <input type="range" v-model.number="baseColor.s" min="0" max="100" class="w-full" />
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-2">Lightness ({{ baseColor.l }}%)</label>
-              <input type="range" v-model.number="baseColor.l" min="0" max="100" class="w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Palette -->
-    <div class="mb-8">
-      <h2 class="text-xl font-bold mb-4">Main Palette</h2>
-      <div class="flex gap-4 mb-4">
-        <div v-for="(color, index) in palette" :key="index"
-          class="w-16 h-16 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
-          :style="{ backgroundColor: `hsl(${color.h}deg ${color.s}% ${color.l}%)` }"
-          @click="generateShades(color, index)" />
-      </div>
-    </div>
-
-    <!-- Shades Section -->
-    <template v-if="selectedColor !== null">
-      <div>
-        <h2 class="text-xl font-bold mb-4">Shades for Color {{ selectedColor + 1 }}</h2>
-        <div class="space-y-6">
-          <!-- Base lightness variations -->
-          <div class="flex items-center gap-4">
-            <div class="w-32 text-sm">Base lightness variations:</div>
-            <div class="grid grid-cols-5 gap-2">
-              <div v-for="(shade, index) in palette[selectedColor].shades.slice(0, 5)" :key="index"
-                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
-                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
-                @click="selectShade({ ...shade, rowIndex: 0, index })" />
-            </div>
-          </div>
-
-          <!-- Higher saturation -->
-          <div class="flex items-center gap-4">
-            <div class="w-32 text-sm">Higher saturation:</div>
-            <div class="grid grid-cols-5 gap-2">
-              <div v-for="(shade, index) in palette[selectedColor].shades.slice(5, 10)" :key="index"
-                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
-                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
-                @click="selectShade({ ...shade, rowIndex: 1, index })" />
-            </div>
-          </div>
-
-          <!-- Lower saturation -->
-          <div class="flex items-center gap-4">
-            <div class="w-32 text-sm">Lower saturation:</div>
-            <div class="grid grid-cols-5 gap-2">
-              <div v-for="(shade, index) in palette[selectedColor].shades.slice(10, 15)" :key="index"
-                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
-                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
-                @click="selectShade({ ...shade, rowIndex: 2, index })" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Color Values Section -->
-      <div class="mt-6 space-y-6">
-        <!-- Selected Main Color -->
-        <div v-if="selectedColor !== null">
-          <h3 class="text-lg font-semibold mb-2">Selected Main Color</h3>
-          <div class="grid grid-cols-4 gap-4">
-            <input readonly :value="getColorFormats(palette[selectedColor]).hsl" class="px-3 py-2 border rounded-lg" />
-            <input readonly :value="getColorFormats(palette[selectedColor]).rgb" class="px-3 py-2 border rounded-lg" />
-            <input readonly :value="getColorFormats(palette[selectedColor]).hex" class="px-3 py-2 border rounded-lg" />
-            <div class="flex gap-2">
-              <button v-for="format in ['HSL', 'RGB', 'HEX']" :key="format"
-                class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
-                @click="copyColor(palette[selectedColor], format.toLowerCase())">
-                {{ format }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Selected Shade -->
-        <div v-if="selectedShade">
-          <h3 class="text-lg font-semibold mb-2">Selected Shade</h3>
-          <div class="grid grid-cols-4 gap-4">
-            <input readonly :value="getColorFormats(selectedShade).hsl" class="px-3 py-2 border rounded-lg" />
-            <input readonly :value="getColorFormats(selectedShade).rgb" class="px-3 py-2 border rounded-lg" />
-            <input readonly :value="getColorFormats(selectedShade).hex" class="px-3 py-2 border rounded-lg" />
-            <div class="flex gap-2">
-              <button v-for="format in ['HSL', 'RGB', 'HEX']" :key="format"
-                class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
-                @click="copyColor(selectedShade, format.toLowerCase())">
-                {{ format }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-  </div>
-</template>
-
+<!-- ColorPaletteGenerator.vue -->
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue'
 
@@ -133,6 +7,8 @@ interface Color {
   s: number
   l: number
   shades?: Color[]
+  rowIndex?: number
+  index?: number
 }
 
 interface ColorFormats {
@@ -261,9 +137,11 @@ const generateShades = (color: Color, index: number) => {
     })
   })
 
-  palette.value[index].shades = newShades
-  selectedColor.value = index
-  selectedShade.value = null
+  if (palette.value[index]) {
+    palette.value[index].shades = newShades
+    selectedColor.value = index
+    selectedShade.value = null
+  }
 }
 
 const handleHexInput = () => {
@@ -273,11 +151,11 @@ const handleHexInput = () => {
   }
 }
 
-const selectShade = (shade: Color) => {
+const selectShade = (shade: Color & { rowIndex: number; index: number }) => {
   selectedShade.value = shade
 }
 
-const copyColor = async (color: Color, format: 'hsl' | 'rgb' | 'hex') => {
+const copyColor = async (color: Color, format: keyof ColorFormats) => {
   const formats = getColorFormats(color)
   await navigator.clipboard.writeText(formats[format])
 }
@@ -289,6 +167,137 @@ watch(
   { immediate: true }
 )
 </script>
+
+<template>
+  <div class="p-6 max-w-4xl mx-auto">
+    <!-- Base Color Input Card -->
+    <div class="bg-white rounded-lg shadow-sm mb-6">
+      <div class="p-6">
+        <div class="space-y-4">
+          <div class="flex gap-4 items-end">
+            <div class="flex-1">
+              <label class="block text-sm font-medium mb-2">Base Color (HEX)</label>
+              <input v-model="hexInput" placeholder="#FF5733" class="w-full px-3 py-2 border rounded-lg"
+                @input="handleHexInput" />
+            </div>
+            <div class="w-16 h-10 rounded-lg shadow-sm"
+              :style="{ backgroundColor: `hsl(${baseColor.h}deg ${baseColor.s}% ${baseColor.l}%)` }" />
+          </div>
+
+          <h2 class="text-xl font-bold mb-4">HSL Controls</h2>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Hue ({{ baseColor.h }}°)</label>
+              <input type="range" v-model.number="baseColor.h" min="0" max="360" class="w-full" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Saturation ({{ baseColor.s }}%)</label>
+              <input type="range" v-model.number="baseColor.s" min="0" max="100" class="w-full" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Lightness ({{ baseColor.l }}%)</label>
+              <input type="range" v-model.number="baseColor.l" min="0" max="100" class="w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Palette -->
+    <div class="mb-8">
+      <h2 class="text-xl font-bold mb-4">Main Palette</h2>
+      <div class="flex gap-4 mb-4">
+        <div v-for="(color, index) in palette" :key="index"
+          class="w-16 h-16 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
+          :style="{ backgroundColor: `hsl(${color.h}deg ${color.s}% ${color.l}%)` }"
+          @click="generateShades(color, index)" />
+      </div>
+    </div>
+
+    <!-- Shades Section -->
+    <template v-if="selectedColor !== null && palette[selectedColor]?.shades">
+      <div>
+        <h2 class="text-xl font-bold mb-4">Shades for Color {{ selectedColor + 1 }}</h2>
+        <div class="space-y-6">
+          <!-- Base lightness variations -->
+          <div class="flex items-center gap-4">
+            <div class="w-32 text-sm">Base lightness variations:</div>
+            <div class="grid grid-cols-5 gap-2">
+              <div v-for="(shade, index) in palette[selectedColor].shades?.slice(0, 5)" :key="index"
+                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
+                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
+                @click="selectShade({ ...shade, rowIndex: 0, index })" />
+            </div>
+          </div>
+
+          <!-- Higher saturation -->
+          <div class="flex items-center gap-4">
+            <div class="w-32 text-sm">Higher saturation:</div>
+            <div class="grid grid-cols-5 gap-2">
+              <div v-for="(shade, index) in palette[selectedColor].shades?.slice(5, 10)" :key="index"
+                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
+                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
+                @click="selectShade({ ...shade, rowIndex: 1, index })" />
+            </div>
+          </div>
+
+          <!-- Lower saturation -->
+          <div class="flex items-center gap-4">
+            <div class="w-32 text-sm">Lower saturation:</div>
+            <div class="grid grid-cols-5 gap-2">
+              <div v-for="(shade, index) in palette[selectedColor].shades?.slice(10, 15)" :key="index"
+                class="w-10 h-10 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
+                :style="{ backgroundColor: `hsl(${shade.h}deg ${shade.s}% ${shade.l}%)` }"
+                @click="selectShade({ ...shade, rowIndex: 2, index })" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Values Section -->
+      <div class="mt-6 space-y-6">
+        <!-- Selected Main Color -->
+        <div v-if="selectedColor !== null && palette[selectedColor]">
+          <h3 class="text-lg font-semibold mb-2">Selected Main Color</h3>
+          <div class="grid grid-cols-4 gap-4">
+            <template v-if="palette[selectedColor]">
+              <input readonly :value="getColorFormats(palette[selectedColor]).hsl"
+                class="px-3 py-2 border rounded-lg" />
+              <input readonly :value="getColorFormats(palette[selectedColor]).rgb"
+                class="px-3 py-2 border rounded-lg" />
+              <input readonly :value="getColorFormats(palette[selectedColor]).hex"
+                class="px-3 py-2 border rounded-lg" />
+              <div class="flex gap-2">
+                <button v-for="format in ['hsl', 'rgb', 'hex'] as const" :key="format"
+                  class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
+                  @click="copyColor(palette[selectedColor], format)">
+                  {{ format.toUpperCase() }}
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Selected Shade -->
+        <div v-if="selectedShade">
+          <h3 class="text-lg font-semibold mb-2">Selected Shade</h3>
+          <div class="grid grid-cols-4 gap-4">
+            <input readonly :value="getColorFormats(selectedShade).hsl" class="px-3 py-2 border rounded-lg" />
+            <input readonly :value="getColorFormats(selectedShade).rgb" class="px-3 py-2 border rounded-lg" />
+            <input readonly :value="getColorFormats(selectedShade).hex" class="px-3 py-2 border rounded-lg" />
+            <div class="flex gap-2">
+              <button v-for="format in ['hsl', 'rgb', 'hex'] as const" :key="format"
+                class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
+                @click="copyColor(selectedShade, format)">
+                {{ format.toUpperCase() }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
 
 <style scoped>
 input[type="range"] {
