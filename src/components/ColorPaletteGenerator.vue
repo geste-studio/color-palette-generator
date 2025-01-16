@@ -94,17 +94,28 @@ const generatePalette = () => {
   const newPalette: Color[] = []
   let currentHue = baseColor.h
 
-  for (let i = 0; i < 8; i++) {
+  // First color (base)
+  newPalette.push({
+    h: currentHue % 360,
+    s: baseColor.s,
+    l: baseColor.l,
+    shades: []
+  })
+
+  // For the remaining 7 colors
+  for (let i = 1; i < 8; i++) {
+    // Add increment based on position:
+    if (i === 1) currentHue += 30      // Second color: +30
+    else if (i === 2) currentHue += 90  // Third color: +90
+    else if (i === 7) currentHue += 60  // Last color: +60
+    else currentHue += 30               // Others: +30
+
     newPalette.push({
       h: currentHue % 360,
       s: baseColor.s,
       l: baseColor.l,
       shades: []
     })
-
-    if (i === 1) currentHue += 90
-    else if (i === 7) currentHue += 60
-    else currentHue += 30
   }
 
   palette.value = newPalette
@@ -163,7 +174,13 @@ const copyColor = async (color: Color, format: keyof ColorFormats) => {
 // Watch for changes in baseColor
 watch(
   () => ({ ...baseColor }),
-  () => generatePalette(),
+  () => {
+    generatePalette()
+    // If a color is selected, regenerate its shades
+    if (selectedColor.value !== null && palette.value[selectedColor.value]) {
+      generateShades(palette.value[selectedColor.value], selectedColor.value)
+    }
+  },
   { immediate: true }
 )
 </script>
@@ -206,11 +223,15 @@ watch(
     <!-- Main Palette -->
     <div class="mb-8">
       <h2 class="text-xl font-bold mb-4">Main Palette</h2>
-      <div class="flex gap-4 mb-4">
-        <div v-for="(color, index) in palette" :key="index"
-          class="w-16 h-16 cursor-pointer rounded-lg shadow-sm transition-transform hover:scale-105"
-          :style="{ backgroundColor: `hsl(${color.h}deg ${color.s}% ${color.l}%)` }"
-          @click="generateShades(color, index)" />
+      <div class="flex justify-between mb-4">
+        <div v-for="(color, index) in palette" :key="index" class="w-16 text-center">
+          <div class="h-16 rounded-lg mb-1 cursor-pointer shadow-sm transition-transform hover:scale-105"
+            :style="{ backgroundColor: `hsl(${color.h}deg ${color.s}% ${color.l}%)` }"
+            @click="generateShades(color, index)" />
+          <div class="text-xs">
+            {{ color.h.toFixed(0) }}°
+          </div>
+        </div>
       </div>
     </div>
 
@@ -269,9 +290,13 @@ watch(
                 class="px-3 py-2 border rounded-lg" />
               <div class="flex gap-2">
                 <button v-for="format in ['hsl', 'rgb', 'hex'] as const" :key="format"
-                  class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
+                  class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100 relative group"
                   @click="copyColor(palette[selectedColor], format)">
                   {{ format.toUpperCase() }}
+                  <span
+                    class="absolute w-20 -top-10 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click to copy
+                  </span>
                 </button>
               </div>
             </template>
@@ -287,9 +312,13 @@ watch(
             <input readonly :value="getColorFormats(selectedShade).hex" class="px-3 py-2 border rounded-lg" />
             <div class="flex gap-2">
               <button v-for="format in ['hsl', 'rgb', 'hex'] as const" :key="format"
-                class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100"
+                class="flex-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-100 relative group"
                 @click="copyColor(selectedShade, format)">
                 {{ format.toUpperCase() }}
+                <span
+                  class="absolute w-20 -top-10 left-1/2 transform -translate-x-1/2 bg-gray-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to copy
+                </span>
               </button>
             </div>
           </div>
